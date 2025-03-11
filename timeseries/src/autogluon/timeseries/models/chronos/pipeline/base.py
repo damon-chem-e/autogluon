@@ -123,6 +123,7 @@ class BaseChronosPipeline(metaclass=PipelineRegistry):
         cls,
         pretrained_model_name_or_path: Union[str, Path],
         *model_args,
+        random_init=False,
         force=False,
         **kwargs,
     ):
@@ -157,4 +158,4 @@ class BaseChronosPipeline(metaclass=PipelineRegistry):
         if class_ is None:
             raise ValueError(f"Trying to load unknown pipeline class: {pipeline_class_name}")
 
-        return class_.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        return class_.from_pretrained(pretrained_model_name_or_path, random_init=random_init, *model_args, **kwargs)

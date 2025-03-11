@@ -280,7 +280,7 @@ class ChronosModel(AbstractTimeSeriesModel):
             minimum_resources["num_gpus"] = self.min_num_gpus
         return minimum_resources
 
-    def load_model_pipeline(self, is_training: bool = False):
+    def load_model_pipeline(self, random_init=False, is_training: bool = False):
         from .pipeline import BaseChronosPipeline
 
         gpu_available = self._is_gpu_available()
@@ -297,10 +297,17 @@ class ChronosModel(AbstractTimeSeriesModel):
         pipeline = BaseChronosPipeline.from_pretrained(
             self.model_path,
             device_map=device,
+            random_init=random_init,
             # optimization cannot be used during fine-tuning
             optimization_strategy=None if is_training else self.optimization_strategy,
             torch_dtype=self.torch_dtype,
         )
+
+        # TODO: pipeline = BaseChronosPipeline.from_random_init()
+        # model_params = self._get_model_params()
+        # self._validate_and_assign_attributes(model_params)
+        # do_fine_tune = model_params["fine_tune"]
+        # check if "random_init" param is true ^^
 
         self._model_pipeline = pipeline
 
@@ -334,6 +341,7 @@ class ChronosModel(AbstractTimeSeriesModel):
         init_args.setdefault("eval_during_fine_tune", False)
         init_args.setdefault("fine_tune_eval_max_items", 256)
         init_args.setdefault("fine_tune_shuffle_buffer_size", 10_000)
+        init_args.setdefault("from_scratch", False)
 
         eval_during_fine_tune = init_args["eval_during_fine_tune"]
         output_dir = Path(self.path) / "transformers_logs"
@@ -434,16 +442,29 @@ class ChronosModel(AbstractTimeSeriesModel):
         model_params = self._get_model_params()
         self._validate_and_assign_attributes(model_params)
         do_fine_tune = model_params["fine_tune"]
+        from_scratch = model_params["from_scratch"]
 
         if do_fine_tune:
             assert train_data is not None, "train_data cannot be None when fine_tune=True"
 
         eval_during_fine_tune = val_data is not None and model_params["eval_during_fine_tune"]
 
-        if do_fine_tune:
+        if do_fine_tune or from_scratch:
             context_length = self._get_context_length(train_data)
             # load model pipeline to device memory
-            self.load_model_pipeline(is_training=True)
+            if do_fine_tune:
+                self.load_model_pipeline(is_training=True)
+            elif from_scratch:
+                self.load_model_pipeline(random_init=True, is_training=True)
+                
+            # DEBUG
+            model = self.model_pipeline.inner_model
+            for name, param in model.named_parameters():
+                if 'weight' in name and param.dim() == 2:
+                    logger.debug(f"\tSample weights from {name} with from_scratch={from_scratch}:")
+                    sample = param[:3, :3].detach().cpu().numpy()
+                    logger.debug(f"\t{sample}")
+                    break
 
             fine_tune_prediction_length = self.prediction_length
             model_prediction_length = self.model_pipeline.inner_model.config.chronos_config["prediction_length"]

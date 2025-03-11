@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoModel
 from transformers.models.t5.modeling_t5 import (
     ACT2FN,
     T5Config,
@@ -489,7 +489,7 @@ class ChronosBoltPipeline(BaseChronosPipeline):
         return quantiles, mean
 
     @classmethod
-    def from_pretrained(cls, *args, **kwargs):
+    def from_pretrained(cls, random_init=False, *args, **kwargs):
         """
         Load the model, either from a local path or from the HuggingFace Hub.
         Supports the same arguments as ``AutoConfig`` and ``AutoModel``
@@ -514,5 +514,9 @@ class ChronosBoltPipeline(BaseChronosPipeline):
             logger.warning(f"Unknown architecture: {architecture}, defaulting to ChronosBoltModelForForecasting")
             class_ = ChronosBoltModelForForecasting
 
-        model = class_.from_pretrained(*args, **kwargs)
+        if random_init:
+            model = AutoModel.from_config(config)
+        else:
+            model = class_.from_pretrained(*args, **kwargs)
+            
         return cls(model=model)
