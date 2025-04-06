@@ -135,7 +135,7 @@ class ChronosBoltModelForForecasting(T5PreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"lm_head.weight"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
-    def __init__(self, config: T5Config):
+    def __init__(self, config: T5Config, **kwargs):
         assert hasattr(config, "chronos_config"), "Not a Chronos config file"
 
         super().__init__(config)
@@ -489,7 +489,7 @@ class ChronosBoltPipeline(BaseChronosPipeline):
         return quantiles, mean
 
     @classmethod
-    def from_pretrained(cls, random_init=False, *args, **kwargs):
+    def from_pretrained(cls, *args, **kwargs):
         """
         Load the model, either from a local path or from the HuggingFace Hub.
         Supports the same arguments as ``AutoConfig`` and ``AutoModel``
@@ -498,6 +498,8 @@ class ChronosBoltPipeline(BaseChronosPipeline):
         # if optimization_strategy is provided, pop this as it won't be used
         kwargs.pop("optimization_strategy", None)
 
+        if (kwargs.get("random_init")):
+            kwargs["torch_dtype"] = "float"
         config = AutoConfig.from_pretrained(*args, **kwargs)
         assert hasattr(config, "chronos_config"), "Not a Chronos config file"
 
@@ -514,8 +516,8 @@ class ChronosBoltPipeline(BaseChronosPipeline):
             logger.warning(f"Unknown architecture: {architecture}, defaulting to ChronosBoltModelForForecasting")
             class_ = ChronosBoltModelForForecasting
 
-        if random_init:
-            model = AutoModel.from_config(config)
+        if kwargs.get("random_init"):
+            model = ChronosBoltModelForForecasting(config)
         else:
             model = class_.from_pretrained(*args, **kwargs)
             

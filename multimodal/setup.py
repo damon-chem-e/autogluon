@@ -64,8 +64,8 @@ tests_require = [
     "datasets>=2.16.0,<2.20.0",
     "onnx>=1.13.0,<1.16.2;platform_system=='Windows'",  # cap at 1.16.1 for issue https://github.com/onnx/onnx/issues/6267
     "onnx>=1.13.0,<1.18.0;platform_system!='Windows'",
-    "onnxruntime>=1.17.0,<1.20.0",  # install for gpu system due to https://github.com/autogluon/autogluon/issues/3804
-    "onnxruntime-gpu>=1.17.0,<1.20.0;platform_system!='Darwin' and platform_machine!='aarch64'",
+    "onnxruntime",  # install for gpu system due to https://github.com/autogluon/autogluon/issues/3804. Changed because onnxruntime version > 1.17 doesn't exist
+    "onnxruntime-gpu;platform_system!='Darwin' and platform_machine!='aarch64'",
     "tensorrt>=8.6.0,<10.3;platform_system=='Linux' and python_version<'3.11'",
 ]
 

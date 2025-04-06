@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import traceback
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union
@@ -373,8 +374,7 @@ class TimeSeriesTrainer(AbstractTrainer[AbstractTimeSeriesModel]):
             logger.error(f"\tTime limit exceeded... Skipping {model.name}.")
         except (Exception, MemoryError) as err:
             logger.error(f"\tWarning: Exception caused {model.name} to fail during training... Skipping this model.")
-            logger.error(f"\t{err}")
-            logger.debug(traceback.format_exc())
+            logger.error(f"\tFull traceback:\n{traceback.format_exc()}")
         else:
             self._add_model(model=model)  # noqa: F821
             model_names_trained.append(model.name)  # noqa: F821

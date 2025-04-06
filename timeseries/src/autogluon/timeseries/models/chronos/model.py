@@ -461,9 +461,6 @@ class ChronosModel(AbstractTimeSeriesModel):
             model = self.model_pipeline.inner_model
             for name, param in model.named_parameters():
                 if 'weight' in name and param.dim() == 2:
-                    # logger.debug(f"\tSample weights from {name} with from_scratch={from_scratch}:")
-                    # sample = param[:3, :3].detach().cpu().numpy()
-                    # logger.debug(f"\t{sample}")
                     print(f"\tSample weights from {name} with from_scratch={from_scratch}:")
                     sample = param[:3, :3].detach().cpu().numpy()
                     print(f"\t{sample}")

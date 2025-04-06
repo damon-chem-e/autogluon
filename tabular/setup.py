@@ -84,7 +84,7 @@ if is_darwin or is_aarch64:
         "skl2onnx>=1.15.0,<1.18.0",
         # For macOS, there isn't a onnxruntime-gpu package installed with skl2onnx.
         # Therefore, we install onnxruntime explicitly here just for macOS.
-        "onnxruntime>=1.17.0,<1.20.0",
+        "onnxruntime",
     ]
 else:
     # For other platforms, include both CPU and GPU versions
@@ -92,8 +92,8 @@ else:
         "onnx>=1.13.0,<1.16.2;platform_system=='Windows'",  # cap at 1.16.1 for issue https://github.com/onnx/onnx/issues/6267
         "onnx>=1.13.0,<1.18.0;platform_system!='Windows'",
         "skl2onnx>=1.15.0,<1.18.0",
-        "onnxruntime>=1.17.0,<1.20.0",  # install for gpu system due to https://github.com/autogluon/autogluon/issues/3804
-        "onnxruntime-gpu>=1.17.0,<1.20.0",
+        "onnxruntime",  # install for gpu system due to https://github.com/autogluon/autogluon/issues/3804
+        "onnxruntime-gpu",
     ]
 
 # TODO: v1.0: Rename `all` to `core`, make `all` contain everything.

@@ -122,9 +122,9 @@ class BaseChronosPipeline(metaclass=PipelineRegistry):
     def from_pretrained(
         cls,
         pretrained_model_name_or_path: Union[str, Path],
-        *model_args,
         random_init=False,
         force=False,
+        *model_args,
         **kwargs,
     ):
         """
@@ -141,13 +141,13 @@ class BaseChronosPipeline(metaclass=PipelineRegistry):
             from .utils import cache_model_from_s3
 
             local_model_path = cache_model_from_s3(str(pretrained_model_name_or_path), force=force)
-            return cls.from_pretrained(local_model_path, *model_args, **kwargs)
+            return cls.from_pretrained(local_model_path, random_init=random_init, *model_args, **kwargs)
 
         torch_dtype = kwargs.get("torch_dtype", "auto")
         if torch_dtype != "auto" and isinstance(torch_dtype, str):
             kwargs["torch_dtype"] = cls.dtypes[torch_dtype]
 
-        config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
+        config = AutoConfig.from_pretrained(pretrained_model_name_or_path, random_init=random_init, **kwargs)
         is_valid_config = hasattr(config, "chronos_pipeline_class") or hasattr(config, "chronos_config")
 
         if not is_valid_config:
