@@ -498,7 +498,7 @@ class ChronosBoltPipeline(BaseChronosPipeline):
         # if optimization_strategy is provided, pop this as it won't be used
         kwargs.pop("optimization_strategy", None)
 
-        if (kwargs.get("random_init")):
+        if kwargs.get("random_init"):
             kwargs["torch_dtype"] = "float"
         config = AutoConfig.from_pretrained(*args, **kwargs)
         assert hasattr(config, "chronos_config"), "Not a Chronos config file"
@@ -517,8 +517,11 @@ class ChronosBoltPipeline(BaseChronosPipeline):
             class_ = ChronosBoltModelForForecasting
 
         if kwargs.get("random_init"):
+            config.chronos_config["input_patch_size"] = kwargs.get("input_patch_size")
+            config.chronos_config["input_patch_stride"] = kwargs.get("input_patch_stride")
             model = ChronosBoltModelForForecasting(config)
         else:
             model = class_.from_pretrained(*args, **kwargs)
             
+        print("Patch params: ", config.chronos_config["input_patch_size"], config.chronos_config["input_patch_stride"])
         return cls(model=model)

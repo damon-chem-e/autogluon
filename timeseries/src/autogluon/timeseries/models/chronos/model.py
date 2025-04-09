@@ -280,7 +280,12 @@ class ChronosModel(AbstractTimeSeriesModel):
             minimum_resources["num_gpus"] = self.min_num_gpus
         return minimum_resources
 
-    def load_model_pipeline(self, random_init=False, is_training: bool = False):
+    def load_model_pipeline(
+        self, 
+        random_init=False, 
+        input_patch_size=16,
+        input_patch_stride=16,
+        is_training: bool = False):
         from .pipeline import BaseChronosPipeline
 
         gpu_available = self._is_gpu_available()
@@ -298,16 +303,12 @@ class ChronosModel(AbstractTimeSeriesModel):
             self.model_path,
             device_map=device,
             random_init=random_init,
+            input_patch_size=input_patch_size,
+            input_patch_stride=input_patch_stride,
             # optimization cannot be used during fine-tuning
             optimization_strategy=None if is_training else self.optimization_strategy,
             torch_dtype=self.torch_dtype,
         )
-
-        # TODO: pipeline = BaseChronosPipeline.from_random_init()
-        # model_params = self._get_model_params()
-        # self._validate_and_assign_attributes(model_params)
-        # do_fine_tune = model_params["fine_tune"]
-        # check if "random_init" param is true ^^
 
         self._model_pipeline = pipeline
 
@@ -333,6 +334,7 @@ class ChronosModel(AbstractTimeSeriesModel):
         init_args.setdefault("data_loader_num_workers", 0)
         init_args.setdefault("context_length", None)
         init_args.setdefault("optimization_strategy", None)
+        
         init_args.setdefault("fine_tune", False)
         init_args.setdefault("keep_transformers_logs", False)
         init_args.setdefault("fine_tune_lr", 1e-5)
@@ -341,7 +343,10 @@ class ChronosModel(AbstractTimeSeriesModel):
         init_args.setdefault("eval_during_fine_tune", False)
         init_args.setdefault("fine_tune_eval_max_items", 256)
         init_args.setdefault("fine_tune_shuffle_buffer_size", 10_000)
+        
         init_args.setdefault("from_scratch", False)
+        init_args.setdefault("input_patch_size", 16)
+        init_args.setdefault("input_patch_stride", 16)
 
         eval_during_fine_tune = init_args["eval_during_fine_tune"]
         output_dir = Path(self.path) / "transformers_logs"
@@ -444,8 +449,8 @@ class ChronosModel(AbstractTimeSeriesModel):
         do_fine_tune = model_params["fine_tune"]
         from_scratch = model_params["from_scratch"]
 
-        if do_fine_tune:
-            assert train_data is not None, "train_data cannot be None when fine_tune=True"
+        if do_fine_tune or from_scratch:
+            assert train_data is not None, "train_data cannot be None when fine tuning or training from scratch!"
 
         eval_during_fine_tune = val_data is not None and model_params["eval_during_fine_tune"]
 
@@ -455,7 +460,11 @@ class ChronosModel(AbstractTimeSeriesModel):
             if do_fine_tune:
                 self.load_model_pipeline(is_training=True)
             elif from_scratch:
-                self.load_model_pipeline(random_init=True, is_training=True)
+                self.load_model_pipeline(
+                    random_init=True, 
+                    input_patch_size=model_params["input_patch_size"], 
+                    input_patch_stride=model_params["input_patch_stride"], 
+                    is_training=True)
                 
             # DEBUG
             model = self.model_pipeline.inner_model
