@@ -7,12 +7,15 @@ from typing import Any, Dict, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
+import json
+import matplotlib.pyplot as plt
 
 from autogluon.common.loaders import load_pkl
 from autogluon.common.space import Space
 from autogluon.timeseries.dataset.ts_dataframe import TimeSeriesDataFrame
 from autogluon.timeseries.models.abstract import AbstractTimeSeriesModel
 from autogluon.timeseries.utils.warning_filters import disable_duplicate_logs, warning_filter
+from transformers import TrainerCallback
 
 logger = logging.getLogger("autogluon.timeseries.models.chronos")
 
@@ -79,6 +82,42 @@ MODEL_ALIASES = {
     "bolt_base": "autogluon/chronos-bolt-base",
 }
 
+class LossLoggingCallback(TrainerCallback):
+    def __init__(self, model_name, output_dir):
+        self.model_name = model_name
+        self.current_step = 0
+        self.training_history = {
+            'steps': [],
+            'training_loss': [],
+            'eval_loss': []
+        }
+        # Create a directory for this model's logs
+        self.output_dir = Path(output_dir) / 'training_logs' / model_name.replace('/', '_')
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None:
+            return
+        
+        # Extract training loss
+        if "loss" in logs:
+            self.current_step += 1
+            self.training_history['steps'].append(self.current_step)
+            self.training_history['training_loss'].append(logs['loss'])
+            logger.info(f"\t{self.model_name} - Step {self.current_step}: Loss = {logs['loss']:.6f}")
+            
+        # Extract eval loss
+        if "eval_loss" in logs:
+            self.training_history['eval_loss'].append(logs['eval_loss'])
+            logger.info(f"\t{self.model_name} - Evaluation Loss = {logs['eval_loss']:.6f}")
+            
+        # Save after each log
+        self._save_history()
+    
+    def _save_history(self):
+        history_file = self.output_dir / 'training_history.json'
+        with open(history_file, 'w') as f:
+            json.dump(self.training_history, f, indent=2)
 
 class ChronosModel(AbstractTimeSeriesModel):
     """Chronos [Ansari2024]_ pretrained time series forecasting models which can be used for zero-shot forecasting or fine-tuned
@@ -511,6 +550,12 @@ class ChronosModel(AbstractTimeSeriesModel):
             callbacks = []
             if time_limit is not None:
                 callbacks.append(TimeLimitCallback(time_limit=time_limit))
+
+            # Add our loss logging callback
+            callbacks.append(LossLoggingCallback(
+                model_name=self.name,
+                output_dir=self.path
+            ))
 
             if val_data is not None:
                 callbacks.append(EvaluateAndSaveFinalStepCallback())
